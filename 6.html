@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>City Guess</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        background-size: cover;
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+	#map { width: 100%; height: 100%; }
+	#playButton, #spplayButton {
+		position: fixed;
+		width: 300px; /* Set a fixed width */
+		height: 150px; /* Set a fixed height */
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background-color: rgba(0, 0, 0, 0.7);
+		color: #fff;
+		border: none;
+		cursor: pointer;
+		z-index: 1;
+	}
+
+	#playButton {
+		top: 50%;
+		left: 30%;
+		transform: translate(-50%, -50%);
+		font-size: 6em;
+	}
+
+	#spplayButton {
+		top: 50%;
+		left: 70%;
+		transform: translate(-50%, -50%);
+		font-size: 3.2em;
+	}
+	
+	#exitButton {
+        position: fixed;
+        padding: 10px 20px;
+        background-color: rgba(255,120,120);
+		color: black;
+        border: 2px solid;
+        cursor: pointer;
+        top: 50px;
+        right: 0%;
+        transform: translate(-50%, -50%);
+        font-size: 3em;
+        z-index: 9999;
+	}
+	
+	#guessButton {
+        position: absolute;
+        padding: 10px 20px;
+        background-color: rgba(120,255,120);
+        color: black;
+        border: 2px solid;
+        cursor: pointer;
+        bottom: 60px;
+        left: 80%;
+        font-size: 3em;
+        z-index: 9999;
+	}
+	
+	#score-container {
+		position: fixed;
+		top: 10px;
+		right: 280px;
+		background-color: #ff5722;
+		color: #fff;
+		border-radius: 50px;
+		padding: 10px 30px;
+		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+		font-size: 50px;
+		font-weight: bold;
+	}
+	
+	#distance-container {
+		position: fixed;
+		top: 10px;
+		right: 500px;
+		background-color: #ff5722;
+		color: #fff;
+		border-radius: 50px;
+		padding: 10px 30px;
+		box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 1000;
+		font-size: 50px;
+		font-weight: bold;
+	}
+	
+	#logo {
+		position: absolute;
+		top: 15%;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 50vw;
+		z-index: 1;
+	}
+	
+	#nameInput {
+		position: absolute;
+		bottom: 80px;
+		left: 5%;
+		z-index: 9999;
+		padding: 10px;
+		border: 2px solid #ccc;
+		border-radius: 5px;
+		font-size: 25px;
+		display: none;
+		width: 15%;
+        max-width: 300px; 
+	}
+	
+</style>
+</head>
+<body id="body">
+	
+	<div id="map"></div>
+	
+	<input type="text" id="nameInput" placeholder="Enter city">
+	
+	<button id="guessButton">GUESS</button>
+	
+	<img id="logo" src="C:\Users\Matyas\Downloads\cityguess-high-resolution-logo-transparent_white.png" alt="Logo">
+	<button id="playButton">PLAY</button>
+	<button id="spplayButton">SINGLE COUNTRY</button>
+	<button id="exitButton">EXIT</button>
+	<button id="score-container">00000</button>
+	<button id="distance-container">0 km</button>
+
+	<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.4/xlsx.full.min.js"></script>
+
+    <script>
+	
+		cities=3555752;
+		lastscore=0;
+		files=[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 2, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 17, 1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 11, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 4, 1, 1, 1, 13, 1, 1, 2, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 5, 1, 1, 1, 1, 1, 1, 1, 1, 11, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1, 1, 1, 2, 3, 7, 1, 1, 1, 1, 1, 1, 1, 1, 1, 3, 1, 1, 1];
+		values=[71, 503, 5143, 55, 13, 4665, 2044, 4950, 7751, 21671, 9379, 8074, 8394, 328, 3795, 5772, 14541, 6639, 27, 1860, 6329, 5, 238, 22359, 69008, 177, 816, 639, 43794, 377, 11483, 53636, 10597, 1539, 10700, 12386, 52, 14408, 12054, 408248, 15209, 3339, 6487, 468, 728, 16061, 87390, 150, 7954, 87, 1623, 11864, 16073, 4680, 2291, 33, 566, 60186, 11003, 8639, 807, 49, 47, 323, 268601, 1052, 36109, 135, 5369, 27, 8120, 2, 165, 1480, 14711, 853, 12675, 9, 1946, 1774, 870, 3217, 17688, 3984, 4618, 81507, 4464, 2404, 104, 320870, 4, 12774, 48926, 130, 63543, 35, 1875, 829, 7088, 8438, 3452, 1509, 132, 171, 65, 3190, 17100, 40, 47, 10497, 7252, 1665, 314, 33, 6131, 12971, 1900, 20905, 689, 5811, 1092, 11240, 2, 2853, 3618, 62411, 43, 3495, 24871, 16025, 764, 2680, 16, 94, 252, 29, 1962, 52512, 6066, 2470, 1067, 24176, 28198, 7526, 6351, 20568, 17653, 17, 103, 2038, 2587, 2806, 49125, 7844, 38759, 22294, 105438, 1, 1115, 17997, 38, 2898, 50, 19812, 5924, 253192, 1377, 4483, 397, 39, 23041, 42621, 3, 27, 6586, 4276, 9523, 274, 13850, 16729, 436, 4246, 396, 1673, 7722, 129, 14, 27260, 2265, 25968, 2777, 4, 2865, 1867, 1575, 226, 46470, 194, 15, 15635, 12507, 48241, 62295, 162453, 605, 12024, 43, 12003, 9, 6536, 1079, 180, 1996, 64948, 2743, 1538, 670]
+		keys=['ad', 'ae', 'af', 'ag', 'ai', 'al', 'am', 'ao', 'ar', 'at', 'au', 'az', 'ba', 'bb', 'bd', 'be', 'bf', 'bg', 'bh', 'bi', 'bj', 'bm', 'bn', 'bo', 'br', 'bs', 'bt', 'bw', 'by', 'bz', 'ca', 'cd', 'cf', 'cg', 'ch', 'ci', 'ck', 'cl', 'cm', 'cn', 'co', 'cr', 'cu', 'cv', 'cy', 'cz', 'de', 'dj', 'dk', 'dm', 'do', 'dz', 'ec', 'ee', 'eg', 'eh', 'er', 'es', 'et', 'fi', 'fj', 'fk', 'fm', 'fo', 'fr', 'ga', 'gb', 'gd', 'ge', 'gg', 'gh', 'gi', 'gl', 'gm', 'gn', 'gq', 'gr', 'gs', 'gt', 'gw', 'gy', 'hn', 'hr', 'ht', 'hu', 'id', 'ie', 'il', 'im', 'in', 'io', 'iq', 'ir', 'is', 'it', 'je', 'jm', 'jo', 'jp', 'ke', 'kg', 'kh', 'ki', 'km', 'kn', 'kp', 'kr', 'kw', 'ky', 'kz', 'la', 'lb', 'lc', 'li', 'lk', 'lr', 'ls', 'lt', 'lu', 'lv', 'ly', 'ma', 'mc', 'md', 'me', 'mg', 'mh', 'mk', 'ml', 'mm', 'mn', 'mr', 'ms', 'mt', 'mu', 'mv', 'mw', 'mx', 'my', 'mz', 'na', 'ne', 'ng', 'ni', 'nl', 'no', 'np', 'nr', 'nu', 'nz', 'om', 'pa', 'pe', 'pg', 'ph', 'pk', 'pl', 'pn', 'ps', 'pt', 'pw', 'py', 'qa', 'ro', 'rs', 'ru', 'rw', 'sa', 'sb', 'sc', 'sd', 'se', 'sg', 'sh', 'si', 'sk', 'sl', 'sm', 'sn', 'so', 'sr', 'ss', 'st', 'sv', 'sy', 'sz', 'tc', 'td', 'tg', 'th', 'tj', 'tk', 'tl', 'tm', 'tn', 'to', 'tr', 'tt', 'tv', 'tw', 'tz', 'ua', 'ug', 'us', 'uy', 'uz', 'vc', 've', 'vg', 'vn', 'vu', 'ws', 'xk', 'ye', 'za', 'zm', 'zw'];
+		ratios = [717, 4134, 7524, 746, 182, 2759, 2790, 8331, 10342, 4065, 12495, 4177, 3124, 943, 8243, 3684, 5814, 4077, 1561, 3661, 4509, 302, 1497, 7099, 16198, 1745, 2375, 5147, 4825, 1959, 13847, 10971, 5621, 4962, 3610, 6203, 182, 6953, 6662, 22652, 8733, 3372, 4435, 1473, 1949, 4157, 7861, 2218, 3362, 764, 3872, 9954, 5635, 2650, 9598, 648, 3717, 7421, 9964, 4953, 2086, 111, 359, 277, 8002, 4214, 7128, 742, 3377, 302, 6075, 237, 277, 2303, 5251, 2431, 4510, 19, 4829, 2692, 3601, 4347, 3305, 3626, 4190, 12806, 3550, 3312, 150, 19246, 25, 7049, 10143, 2761, 7169, 175, 2393, 4203, 8645, 7790, 4527, 5178, 851, 1483, 592, 5274, 5972, 2765, 125, 9305, 4761, 2865, 892, 531, 4677, 3879, 2645, 3188, 1414, 2999, 7559, 7580, 364, 2798, 1866, 6981, 592, 2556, 7801, 8016, 6891, 6352, 160, 1056, 1600, 540, 4956, 11244, 6461, 7559, 5682, 8020, 10850, 4172, 4196, 4891, 5568, 309, 100, 4623, 4805, 3511, 8388, 5646, 8127, 10934, 6605, 40, 2514, 4224, 555, 5329, 2397, 5568, 4078, 18113, 3707, 9447, 2199, 750, 9464, 5722, 2178, 70, 2452, 3391, 3874, 456, 5255, 6537, 3268, 6199, 985, 3091, 5241, 2155, 90, 7662, 3756, 8009, 4507, 180, 2144, 5439, 4788, 820, 8890, 1837, 323, 4433, 8649, 7565, 6563, 17787, 4037, 6876, 752, 7657, 200, 8027, 1639, 1153, 2500, 6925, 9063, 6908, 5856]
+		totalbefore = [0, 71, 574, 5717, 5772, 5785, 10450, 12494, 17444, 25195, 46866, 56245, 64319, 72713, 73041, 76836, 82608, 97149, 103788, 103815, 105675, 112004, 112009, 112247, 134606, 203614, 203791, 204607, 205246, 249040, 249417, 260900, 314536, 325133, 326672, 337372, 349758, 349810, 364218, 376272, 784520, 799729, 803068, 809555, 810023, 810751, 826812, 914202, 914352, 922306, 922393, 924016, 935880, 951953, 956633, 958924, 958957, 959523, 1019709, 1030712, 1039351, 1040158, 1040207, 1040254, 1040577, 1309178, 1310230, 1346339, 1346474, 1351843, 1351870, 1359990, 1359992, 1360157, 1361637, 1376348, 1377201, 1389876, 1389885, 1391831, 1393605, 1394475, 1397692, 1415380, 1419364, 1423982, 1505489, 1509953, 1512357, 1512461, 1833331, 1833335, 1846109, 1895035, 1895165, 1958708, 1958743, 1960618, 1961447, 1968535, 1976973, 1980425, 1981934, 1982066, 1982237, 1982302, 1985492, 2002592, 2002632, 2002679, 2013176, 2020428, 2022093, 2022407, 2022440, 2028571, 2041542, 2043442, 2064347, 2065036, 2070847, 2071939, 2083179, 2083181, 2086034, 2089652, 2152063, 2152106, 2155601, 2180472, 2196497, 2197261, 2199941, 2199957, 2200051, 2200303, 2200332, 2202294, 2254806, 2260872, 2263342, 2264409, 2288585, 2316783, 2324309, 2330660, 2351228, 2368881, 2368898, 2369001, 2371039, 2373626, 2376432, 2425557, 2433401, 2472160, 2494454, 2599892, 2599893, 2601008, 2619005, 2619043, 2621941, 2621991, 2641803, 2647727, 2900919, 2902296, 2906779, 2907176, 2907215, 2930256, 2972877, 2972880, 2972907, 2979493, 2983769, 2993292, 2993566, 3007416, 3024145, 3024581, 3028827, 3029223, 3030896, 3038618, 3038747, 3038761, 3066021, 3068286, 3094254, 3097031, 3097035, 3099900, 3101767, 3103342, 3103568, 3150038, 3150232, 3150247, 3165882, 3178389, 3226630, 3288925, 3451378, 3451983, 3464007, 3464050, 3476053, 3476062, 3482598, 3483677, 3483857, 3485853, 3550801, 3553544, 3555082, 3555752];
+		ratiototal = 1004708;
+	
+		seed=[-1,-1,-1,-1,-1];
+		guessedcoords = [[0,0],[0,0],[0,0],[0,0],[0,0]];
+		seeddata=["","","","",""];
+		
+		round=0;
+		score=0;
+		totaldistance=0;
+		guessed=false;
+		gamefinished=false;
+		
+		let scoreContainer = document.getElementById('score-container');
+		scoreContainer.style.display = 'none';
+	
+        var body = document.getElementById("body");
+        var gifEnabled = false;
+		var playbuttonEnabled = true;
+		togglegif();
+		var exitButton = document.getElementById("exitButton");
+		toggleexitbutton();
+		var playButton = document.getElementById("playButton");
+		var guessButton = document.getElementById("guessButton");
+		toggleguessbutton();
+		let distanceContainer = document.getElementById('distance-container');
+		distanceContainer.style.display = 'none';
+	
+		const apiKey = 'pk.3d27941b9b6ab0b989456a518d6ca6c5';
+
+		document.addEventListener('keydown', function(event) {
+            const guessButton = document.getElementById('guessButton');
+            if (event.key === 'Enter') {
+                guessButton.click();
+            }
+        });
+
+        guessButton.addEventListener('click', async function() {
+			
+			let button = document.getElementById("guessButton");
+			
+			if(button.innerHTML == "GUESS"){
+				const address = document.getElementById('nameInput').value;
+				fetch(`https://us1.locationiq.com/v1/search.php?key=${apiKey}&q=${address}&format=json`)
+					.then(response => {
+						if (!response.ok) {
+							throw new Error('Network response was not ok ' + response.statusText);
+						}
+						return response.json();
+					})
+					.then(data => {
+						console.log(data);
+						if(data){
+							const latitude = data[0].lat;
+							const longitude = data[0].lon;
+							let distanceContainer = document.getElementById('distance-container');
+							distanceContainer.style.display = 'block';
+							putmarkerbycoords(address, latitude, longitude);
+							console.log(latitude, longitude);
+							togglemap(1);
+							putline(seeddata[round], latitude, longitude);
+							guessed = true;
+							update_score(latitude, longitude);
+							let scorelabel = document.getElementById("score-container");
+							scorelabel.innerHTML = String(Math.round(lastscore)).padStart(5, '0');;
+							hideInput();
+							guessedcoords[round][0] = latitude;
+							guessedcoords[round][1] = longitude;
+							console.log(guessedcoords);
+							round++;
+							button.innerHTML = 'NEXT';
+						}
+					})
+					.catch(error => console.error('Error:', error));
+			}
+			
+			if(button.innerHTML == "NEXT"){
+				let scorelabel = document.getElementById("score-container");
+				scorelabel.innerHTML = String(Math.round(score)).padStart(5, '0');;
+				let distanceContainer = document.getElementById('distance-container');
+				distanceContainer.style.display = 'none';
+				if (round < 5){
+					showInput();
+					removemarkers();
+					removelines();
+					togglemap(0);
+					map.setView([seeddata[round].location[1], seeddata[round].location[0]], 4);
+					putmarker(seeddata[round]);
+					button.innerHTML = "GUESS";
+					guessed = false;
+				}
+				else{
+					if (gamefinished == true){
+						location.reload();
+					}
+					else{
+						removemarkers();
+						removelines();
+						for(let i = 0; i<5; i++){
+							putmarker(seeddata[i]);
+							putmarkerbycoords("your guess", guessedcoords[i][0], guessedcoords[i][1]);
+							putline(seeddata[i], guessedcoords[i][0], guessedcoords[i][1]);
+						}
+						gamefinished=true;
+					}
+				}
+			}
+        })
+
+		function randint(min, max) {
+		  min = Math.ceil(min);
+		  max = Math.floor(max);
+		  return Math.floor(Math.random() * (max - min + 1)) + min;
+		}
+	
+		async function generateSeed() {
+			for(let i = 0; i < 5; i++){
+				let id = randint(0, ratiototal-1);
+				for(let j = 0; j < 217; j++){
+					id -= ratios[j];
+					if(id < 0){
+						id = j;
+						break;
+					}
+				}
+				seed[i] = randint(totalbefore[id], totalbefore[id]+values[id]-1);
+				if (i == 0){
+					await populateseeddata(i);
+				} else{
+					populateseeddata(i);
+				}
+			}
+		}
+		
+		async function populateseeddata(i) {
+			seeddata[i] = await getLinebyID(seed[i]);
+			let code = seeddata[i].address.country_code;
+		}
+		
+		async function getLinebyID(cityID) {
+			countryID = -1;
+			for(let i=0; i < keys.length; i++){
+				if(cityID >= values[i]){
+					cityID -= values[i];
+				} else{
+					countryID = i;
+					break;
+				}
+			}
+			if(countryID > -1){
+				if(files[countryID] > 1){
+					let filenum = Math.floor(cityID/25000);
+					cityID -= filenum*25000;
+					file = keys[countryID]+filenum+".ndjson";
+					line = await getLinefromFile(cityID, file);
+					line = JSON.parse(line);
+					return line;
+					
+				} else{
+					file = keys[countryID]+".ndjson";
+					line = await getLinefromFile(cityID, file);
+					line = JSON.parse(line);
+					return line;
+				}
+			} else{
+				console.log("wrong cityID");
+			}
+		}
+		
+		async function getLinefromFile(lineID, File) {
+			const url = 'https://raw.githubusercontent.com/HRALYB-PYGAME/cityguesser/main/' + File;
+			try {
+				const response = await fetch(url);
+				if (!response.ok) {
+					throw new Error(`Failed to fetch file: ${response.statusText}`);
+				}
+				const text = await response.text();
+				const lines = text.split('\n');
+				return lines[lineID];
+			} catch (error) {
+				console.log("ERROR: Fetching file", error);
+			}
+		}
+
+		function showInput() {
+            var input = document.getElementById('nameInput');
+            input.style.display = 'block';
+        }
+		
+		function hideInput() {
+            var input = document.getElementById('nameInput');
+            input.style.display = 'none';
+        }
+
+		function togglegif() {
+			console.log("toggling gif", gifEnabled);
+            if (gifEnabled) {
+                body.style.backgroundImage = "";
+				console.log("tg0");
+                gifEnabled = false;
+            } else {
+                body.style.backgroundImage = "url('https://cdn.pixabay.com/animation/2022/12/24/01/36/01-36-27-376_512.gif')";
+                console.log("tg1");
+				gifEnabled = true;
+            }
+			console.log("toggled gif", gifEnabled);
+        };
+		
+		function toggleplaybutton() {
+			if(playbuttonEnabled){
+				playbuttonEnabled = false;
+			} else{
+				playbuttonEnabled = true;
+			}
+			playButton.style.display = playButton.style.display === "none" ? "block" : "none";
+			spplayButton.style.display = spplayButton.style.display === "none" ? "block" : "none";
+		}
+		
+		function toggleexitbutton() {
+			exitButton.style.display = exitButton.style.display === "none" ? "block" : "none";
+		}
+		
+		function toggleguessbutton() {
+			guessButton.style.display = guessButton.style.display === "none" ? "block" : "none";
+		}
+		
+		function createmap() {
+			map = L.map('map').setView([0, 0], 2);
+			console.log("loaded");
+			nolabeled = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_nolabels/{z}/{x}/{y}.png', {
+				attribution: '&copy; <a href="https://carto.com/attributions">Carto</a>'
+			});
+
+			labeled = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png', {
+				attribution: '&copy; <a href="https://carto.com/attributions">Carto</a>'
+			});
+		}
+		
+		function removemap() {
+			map.remove();
+		}
+		
+		function togglemap(type) {
+			if(type == 0){
+				map.removeLayer(labeled);
+				nolabeled.addTo(map);
+			} else{
+				map.removeLayer(nolabeled);
+				labeled.addTo(map);
+			}
+		}
+		
+		function togglelogo() {
+			if (logo.hidden) {
+				logo.hidden = false;
+			} else {
+				logo.hidden = true;
+			}
+		}
+		
+		function countryCodetoID(code) {
+			let id = 0;
+			for(let i = 0; i < keys.length; i++){
+				if(keys[i] == code){
+					id = i;
+				}
+			}
+			return id;
+		}
+		
+		function putmarker(line) {
+			coords = line.location;
+			var marker1 = L.marker([coords[1], coords[0]]).addTo(map).bindPopup(line.display_name);
+		}
+		
+		function putmarkerbycoords(name, lat, lon) {
+			var marker1 = L.marker([lat, lon]).addTo(map).bindPopup(name);
+		}
+		
+		function putline(line1, line2lat, line2lon) {
+			coords1 = line1.location;
+			var latlngs = [[coords1[1], coords1[0]], [line2lat, line2lon]];
+			
+			console.log("puting line", latlngs);
+			L.polyline(latlngs, {color: 'red'}).addTo(map);
+			console.log("line put");
+		}
+		
+		function removemarkers(){
+			map.eachLayer(function (layer) {
+				if (layer instanceof L.Marker) {
+					map.removeLayer(layer);
+				}
+				try {
+					map.removeLayer(polyline);
+				}
+				catch {
+					return;
+				}
+			});
+		}
+		
+		function removelines(){
+			map.eachLayer(function (layer) {
+				if (layer instanceof L.Polyline) {
+					map.removeLayer(layer);
+				}
+			});
+		}
+		
+		function formatDistance(distance) {
+			if (distance < 1) {
+				let cmDistance = distance * 1000;
+				return `${cmDistance.toFixed(0)} cm`;
+			} else if (distance < 1000) {
+				return `${distance.toFixed(2)} m`;
+			} else {
+				return `${(distance / 1000).toFixed(2)} km`;
+			}
+		}
+		
+		function calculateDistance(coords1, lat2, lon2) {
+			lat1 = coords1[1];
+			lon1 = coords1[0];
+			const R = 6371;
+			const latDelta = (lat2 - lat1) * Math.PI / 180;
+			const lonDelta = (lon2 - lon1) * Math.PI / 180;
+
+			const a = Math.sin(latDelta/2) * Math.sin(latDelta/2) +
+					  Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+					  Math.sin(lonDelta/2) * Math.sin(lonDelta/2);
+			const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+			const distance = R * c;
+			
+			let scorelabel = document.getElementById("distance-container");
+			scorelabel.innerHTML = formatDistance(distance*1000);
+			
+			return distance;
+		}
+		
+		function scorecalc(distance){
+			let scoreadd = 5000;
+			scoreadd *= Math.exp(-0.5 * (distance/320)**2);
+			lastscore = scoreadd;
+			return scoreadd;
+		}
+		
+		function update_score(lat2, lon2){
+			distance = calculateDistance(seeddata[round].location, lat2, lon2);
+			totaldistance += distance;
+			score += scorecalc(distance);
+		}
+
+		playButton.addEventListener('click', async function() {
+			togglelogo();
+			toggleplaybutton();
+			togglegif();
+			toggleexitbutton();
+			showInput();
+			toggleguessbutton();
+			await generateSeed();
+			createmap();
+			togglemap(0);
+			putmarker(seeddata[round]);
+			let scoreContainer = document.getElementById('score-container');
+			scoreContainer.style.display = 'block';
+		});
+		
+		exitButton.addEventListener('click', function() {
+			location.reload();
+		});
+
+    </script>
+</body>
+</html>
